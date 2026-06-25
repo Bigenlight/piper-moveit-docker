@@ -65,7 +65,12 @@ ENV MODE=mock \
     EFFECTOR_TYPE=agx_gripper \
     CAN_IFACE=can0 \
     CAN_BITRATE=1000000 \
-    LC_NUMERIC=C
+    LC_NUMERIC=C \
+    ROS_DOMAIN_ID=0 \
+    RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
+    FASTDDS_BUILTIN_TRANSPORTS=DEFAULT \
+    ROS_STATIC_PEERS="" \
+    ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
 
 # Keep the base ENTRYPOINT (supervisord launches noVNC + our ros-app program).
 # CMD is the default MODE passed to our entrypoint via supervisord (see ros-app.conf,

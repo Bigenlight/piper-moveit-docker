@@ -48,6 +48,31 @@ services:
     volumes:
       - /dev:/dev   # CAN/USB 디바이스 접근
 
+  # ── direct (호스트에서 직접 ROS 제어 + 데스크탑 동시) ──────────────
+  # mock 과 동일한 가짜 하드웨어 동작(CAN 없음, privileged 불필요). host-network 가 아니라
+  # 전용 bridge(고정 IP) 라서 noVNC 데스크탑(6080)이 그대로 살아있고, 동시에 호스트 ros2 로 제어 가능.
+  # 비결: DDS static-peer(유니캐스트) + UDPv4 로 bridge 경계 너머 discovery.
+  #   - 컨테이너 고정 IP 172.28.0.2, 호스트는 이 bridge 의 게이트웨이 172.28.0.1 로 보임.
+  #   - 컨테이너는 ROS_STATIC_PEERS=172.28.0.1(호스트), 호스트 헬퍼는 ROS_STATIC_PEERS=172.28.0.2(컨테이너).
+  #   - multicast 는 bridge 를 못 넘으므로 유니캐스트 static-peer 로 시드. SHM 은 cross-UID 라 UDPv4 강제.
+  # → 호스트에서 `source scripts/host-ros-env.sh` 후 ros2 node/topic/control/action 으로 직접 붙음.
+  #   브라우저는 mock 과 동일하게 http://localhost:6080.
+  # ⚠️ 보안: noVNC 무인증(127.0.0.1 바인딩) + ROS 그래프가 bridge 에 노출. 신뢰된 랩 머신에서만.
+  direct:
+    <<: *piper
+    profiles: ["direct"]
+    networks:
+      piper-direct-net:
+        ipv4_address: 172.28.0.2
+    environment:
+      MODE: mock
+      # 호스트 ros2(host-ros-env.sh) 와 반드시 같은 값 (기본 42 로 호스트의 기존 도메인 0 과 격리).
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+      # bridge 경계: SHM 불가 → UDPv4 강제 + 호스트(게이트웨이)를 static peer 로.
+      FASTDDS_BUILTIN_TRANSPORTS: UDPv4
+      ROS_STATIC_PEERS: ${ROS_STATIC_PEERS:-172.28.0.1}
+      ROS_AUTOMATIC_DISCOVERY_RANGE: SUBNET
+
   # ── dev ──────────────────────────────────────────────────────────
   # 호스트 ./ros2_ws 를 /ws 로 바인드 마운트 → `docker compose exec dev bash` 로 안에서 직접 colcon build / launch.
   # 라이브 코드 편집용. (마운트하면 install/ 이 없으니 ros-app 은 자동 실행 안 되고, 셸에서 수동 빌드)
@@ -73,3 +98,13 @@ services:
             - driver: nvidia
               count: all
               capabilities: ["gpu"]
+
+# direct 프로파일 전용 bridge 네트워크 (고정 서브넷/게이트웨이로 호스트<->컨테이너 static-peer discovery).
+# 게이트웨이 172.28.0.1 = 호스트가 이 bridge 에서 보이는 주소, 컨테이너는 172.28.0.2 로 고정.
+networks:
+  piper-direct-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
