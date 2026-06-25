@@ -123,6 +123,8 @@ ros2 action send_goal /arm_controller/follow_joint_trajectory control_msgs/actio
 > ⚠️ **discovery 지연**: 컨테이너/네트워크를 갓 띄운 직후엔 유니캐스트 discovery 가 즉시 안 채워질 수 있습니다(~20-30초). `node list` 가 비어도 실패가 아니라 수렴 대기 중 — `piper_wait_ready` 로 기다리세요.
 >
 > ⚠️ **보안**: noVNC 가 무인증(127.0.0.1 바인딩)으로 열리고 ROS 그래프가 bridge 에 노출됩니다. 신뢰된 랩 머신에서만 쓰세요. 컨트롤러에 직접 골을 쏘면 MoveIt 충돌검사를 건너뛰니, 실물에선 RViz Plan & Execute 를 권장합니다.
+>
+> 🛡️ **기존 로컬 ROS2 시스템 안 깨지나?** 안 깨집니다 — 환경변수는 셸 한정, DDS 도메인(42)으로 격리, 방화벽은 좁은 ACCEPT 한 줄(순수 추가). 실측 근거는 **[docs/direct-profile-safety.md](docs/direct-profile-safety.md)** 참고.
 
 ---
 
