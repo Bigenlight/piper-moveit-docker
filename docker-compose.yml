@@ -37,7 +37,9 @@ services:
   # 실물 CAN 하드웨어용 (리눅스 전용). can0 접근을 위해 host 네트워크 + privileged.
   # ⚠️ 보안: real 은 root + host network + privileged 로 돌아 사실상 호스트 root 권한과 동등하고,
   #    noVNC 는 무인증으로 호스트에 노출된다. 신뢰할 수 있는 랩 머신에서만, 격리된 네트워크에서 쓸 것.
-  # network_mode: host 면 ports 매핑이 무시된다 → 데스크탑은 호스트의 80 번 (http://localhost) 으로 직접 노출됨.
+  # network_mode: host 면 ports 매핑이 무시된다. 호스트가 자체 데스크탑(:1)을 쓰면 host-net 공유 netns 에서
+  #   VNC X 디스플레이가 충돌하고, ubuntu 권한으론 포트 80(<1024)을 못 연다 → desktop-realfix.sh 가
+  #   기동 시 VNC 를 :2, noVNC 를 6080 으로 재배치한다. 따라서 데스크탑은 http://localhost:6080 (real 도 mock 과 동일 포트).
   real:
     <<: *piper
     profiles: ["real"]

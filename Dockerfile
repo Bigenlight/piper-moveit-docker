@@ -59,6 +59,14 @@ COPY novnc/ros-app.conf /etc/supervisor/conf.d/ros-app.conf
 COPY entrypoint.sh /ros-app-entrypoint.sh
 RUN chmod +x /ros-app-entrypoint.sh
 
+# ---- real(host-network) desktop fix: relocate VNC to :2 + noVNC to 6080 at runtime ----
+# The base regenerates vnc_run.sh + conf.d/supervisord.conf (vnc/novnc on :1/port 80) every
+# start, so this can't be baked statically; desktop-realfix.sh re-applies it for MODE=real only
+# (no-op otherwise). Its conf.d/*.conf lives alongside ros-app.conf and the base never clobbers it.
+COPY novnc/desktop-realfix.conf /etc/supervisor/conf.d/desktop-realfix.conf
+COPY novnc/desktop-realfix.sh /desktop-realfix.sh
+RUN chmod +x /desktop-realfix.sh
+
 # ---- Runtime defaults (SPEC env 계약) ----
 ENV MODE=mock \
     ARM_TYPE=piper \

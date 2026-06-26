@@ -34,16 +34,26 @@ wait_for_display() {
     num="${num%%.*}"
     local sock="/tmp/.X11-unix/X${num}"
     local i
-    for i in $(seq 1 30); do
+    # 60s: in real mode the desktop is relocated to :2 by desktop-realfix (which runs last),
+    # so the display can take longer to appear than the base's immediate :1.
+    for i in $(seq 1 60); do
         if [ -S "${sock}" ]; then
             return 0
         fi
-        echo "[entrypoint] waiting for X display ${disp} (${sock}) ... ${i}/30"
+        echo "[entrypoint] waiting for X display ${disp} (${sock}) ... ${i}/60"
         sleep 1
     done
-    echo "[entrypoint] WARN: X display ${disp} not detected after 30s; continuing anyway."
+    echo "[entrypoint] WARN: X display ${disp} not detected after 60s; continuing anyway."
     return 0
 }
+
+# ---- real (host-network) renders to a non-conflicting X display ----
+# In real mode the container shares the host network namespace (needed for host can0). If the
+# host runs its own desktop on :1, the container VNC collides, so desktop-realfix.sh moves the
+# desktop to :2. RViz must therefore render to :2 too (override the :1 supervisord passes in).
+if [ "${MODE}" = "real" ]; then
+    export DISPLAY=":2"
+fi
 
 echo "[entrypoint] MODE=${MODE} ARM_TYPE=${ARM_TYPE} EFFECTOR_TYPE=${EFFECTOR_TYPE} DISPLAY=${DISPLAY:-<unset>}"
 

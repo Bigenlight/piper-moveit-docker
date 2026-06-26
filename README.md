@@ -148,8 +148,13 @@ ros2 action send_goal /arm_controller/follow_joint_trajectory control_msgs/actio
 ```bash
 sudo ./scripts/host-can-up.sh        # gs_usb 로드 + can0 up @1Mbps (down-first, txqueuelen 포함)
 candump can0                          # (팔 켠 상태) 프레임 흐르는지 확인
-docker compose --profile real up      # real = host network → 데스크탑은 http://localhost (포트 80, 6080 아님)
+docker compose --profile real up      # real = host network → 데스크탑은 http://localhost:6080
 ```
+
+> **real 도 noVNC 는 `http://localhost:6080`** (mock 과 동일 포트). real 은 host-network 라, 호스트가 자체
+> 데스크탑(`:1`)을 쓰면 공유 netns 에서 X 디스플레이가 충돌하고 ubuntu 권한으론 포트 80 을 못 연다.
+> 그래서 컨테이너가 기동 시 `desktop-realfix.sh` 로 VNC 를 `:2`, noVNC 를 `6080` 으로 자동 재배치한다
+> (다른 프로파일은 영향 없음). 헤드리스 호스트라도 6080 으로 통일된다.
 
 **기동(~30초) 후 첫 모션 — MoveIt Plan & Execute 만:**
 - `ros2 control list_controllers` active 확인 + `ros2 topic echo --once /feedback/joint_states` 값이 실제 자세와 일치하는지 확인 (안 맞으면 멈추기)
@@ -158,7 +163,7 @@ docker compose --profile real up      # real = host network → 데스크탑은 
 
 기본 CAN 인터페이스/보율은 `versions.env` 의 `CAN_IFACE=can0` / `CAN_BITRATE=1000000`(1Mbps 고정).
 
-> ⚠️ **보안 경고**: `real` 은 `privileged: true` + `network_mode: host` 라서 사실상 **호스트 root 권한과 동등**하고, noVNC 데스크탑은 **무인증으로 호스트 80 번에 그대로 열립니다** (LAN 에서 누구나 접속 → 팔을 움직일 수 있음). 신뢰할 수 있는 랩 머신 + 격리된 네트워크에서만 쓰고, 공용망에 노출하지 마세요. (mock/dev 는 compose 에서 `127.0.0.1` 로만 바인딩되어 안전.)
+> ⚠️ **보안 경고**: `real` 은 `privileged: true` + `network_mode: host` 라서 사실상 **호스트 root 권한과 동등**하고, noVNC 데스크탑은 **무인증으로 호스트 6080 번에 그대로 열립니다** (LAN 에서 누구나 접속 → 팔을 움직일 수 있음). 신뢰할 수 있는 랩 머신 + 격리된 네트워크에서만 쓰고, 공용망에 노출하지 마세요. (mock/dev 는 compose 에서 `127.0.0.1` 로만 바인딩되어 안전.)
 >
 > 🖥️ **노트북 CPU 가 플래닝에 버거우면**: 로봇은 노트북, 연산은 24.04 PC 로 나누는 분산(ROS2 multi-machine) 구성도 가능. 단 **저수준 제어는 노트북 로컬 유지 + 유선 LAN 필수**. [체크리스트 §7](docs/real-robot-checklist.md) 참고.
 
