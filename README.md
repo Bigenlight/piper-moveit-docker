@@ -221,7 +221,7 @@ mock과 동일한데 NVIDIA GPU를 예약해서 붙입니다. RViz 회전/렌더
 | (direct) 호스트 `ros2 node list` 가 빔 | ① discovery 수렴 대기(~20-30초) → `piper_wait_ready`. ② 호스트 UFW INPUT DROP → `bash scripts/setup-host-firewall.sh` (헬퍼가 자동 호출하지만 수동 확인 가능). ③ 도메인 확인: `echo $ROS_DOMAIN_ID` 가 42 여야 함(헬퍼 source 했는지). |
 | (direct) `topic echo` 에 "A message was lost" | bridge 경유 UDPv4 유니캐스트의 일시적 알림. **데이터는 정상 도착**하니 무시해도 됩니다. |
 | (real) noVNC 가 `localhost:80` 에서 안 열림 | **real 데스크탑은 `http://localhost:6080`** 입니다(80 아님). host-network 라 ubuntu 권한으로 80(<1024)을 못 열어 `desktop-realfix.sh` 가 noVNC 를 6080 으로 재배치합니다. |
-| (real) 접속했는데 화면이 검음 / "갑자기 연결 끊김" | host-network 가 호스트의 X 디스플레이 `:1` 과 충돌 → 컨테이너 VNC 가 `:2` 로 재배치됩니다. 보통 자동 복구되지만, 끊기면 **브라우저 새로고침**. 그래도 안 되면 `docker exec <c> supervisorctl status vnc` 로 `vnc` 가 RUNNING 인지 확인(FATAL 이면 `supervisorctl restart vnc`). 화면잠금(MATE)은 desktop-realfix 가 꺼 둡니다. |
+| (real) 접속했는데 화면이 검음 / "갑자기 연결 끊김" | host-network 가 호스트의 X 디스플레이 `:1` 과 충돌 → 컨테이너 VNC 가 `:2` 로 재배치됩니다. 보통 자동 복구되지만, 끊기면 **브라우저 새로고침**. 그래도 안 되면 `docker exec piper-moveit-docker-real-1 supervisorctl status` 로 `vnc` 가 RUNNING 인지 확인(FATAL 이면 `docker exec piper-moveit-docker-real-1 supervisorctl restart vnc`). 화면잠금(MATE)은 desktop-realfix 가 꺼 둡니다. |
 | (real) `firmware version` / `enable status True` 가 안 뜸 | CAN 미연결/포트 불일치. 호스트가 **두 개 이상 CAN 인터페이스**를 가질 수 있으니(예: can0=Piper 1Mbps, can1=타 장치 500kbps), `candump can0` 로 프레임이 흐르고 `ip -details link show can0` 이 `bitrate 1000000` 인지로 Piper 쪽을 확인. |
 
 ---
