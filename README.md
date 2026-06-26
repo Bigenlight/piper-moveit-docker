@@ -12,7 +12,7 @@ AgileX **Piper** 로봇팔(그리퍼 포함)을 **브라우저 안에서** MoveI
 
 - **베이스**: `ghcr.io/tiryoh/ros2-desktop-vnc:jazzy` — Ubuntu 24.04 + ROS 2 Jazzy + noVNC 데스크탑(포트 6080) 내장
 - **통합**: MoveIt2 + ros2_control + AgileX `agx_arm_ros` (Piper용 MoveIt config / 컨트롤러 / 런치)
-- **모드**: `mock`(가짜 하드웨어) / `direct`(호스트 ros2 직접제어+데스크탑) / `dev`(코드 마운트 셸) / `real`(실물 CAN) / `gpu`(NVIDIA 가속 mock)
+- **모드**: `mock`(가짜 하드웨어) / `dev`(코드 마운트 셸) / `real`(실물 CAN) / `gpu`(NVIDIA 가속 mock)
 - 모든 외부 소스는 SHA/digest로 핀됨 → **재현성 보장** (자세한 건 아래 "재현성 / 핀" 참고)
 
 조작은 **보기만 되는 게 아니라 진짜 조작이 됩니다.** noVNC는 원격 데스크탑이라 마커 드래그, Plan & Execute, 그리퍼 열고 닫기 다 됩니다.
@@ -111,42 +111,6 @@ ros2 launch agx_arm_moveit demo.launch.py arm_type:=piper effector_type:=agx_gri
 
 ---
 
-## 호스트에서 직접 ROS 제어 + 데스크탑 동시 (direct 프로파일)
-
-mock 은 컨테이너 안에서만 ROS 가 돕니다(호스트 터미널 `ros2` 는 못 닿음). **호스트의 `ros2` CLI/스크립트로 컨테이너 로봇을 직접 제어하면서 동시에 RViz 데스크탑도 보고 싶을 때** `direct` 프로파일을 씁니다. (예: 호스트의 Python/RL 코드에서 팔을 굴리고, 움직임은 브라우저 RViz 로 확인)
-
-작동 원리: host-network 가 아니라 **전용 bridge(고정 IP `172.28.0.2`)** 라 noVNC 데스크탑(6080)이 그대로 살아있고, 호스트↔컨테이너 ROS 는 **Fast DDS 유니캐스트 static-peer + UDPv4** 로 bridge 경계를 넘습니다. (멀티캐스트는 bridge 를 못 넘고, cross-UID 라 SHM 도 못 씀)
-
-> **전제**: 호스트에 **ROS 2 Jazzy** 가 설치돼 있어야 호스트에서 `ros2` 를 쓸 수 있습니다 (`source /opt/ros/jazzy/setup.bash`). 윈도우/맥은 이 프로파일 대신 mock 을 쓰고 컨테이너 안에서 제어하세요.
-
-**터미널 A — 컨테이너 띄우기:**
-
-```bash
-docker compose --profile direct up -d direct
-# 브라우저 → http://localhost:6080  (RViz 데스크탑)
-```
-
-**터미널 B — 호스트에서 제어:**
-
-```bash
-source scripts/host-ros-env.sh     # DDS 환경(도메인 42 / UDPv4 / static-peer) 적용 + 방화벽 규칙 자동 등록(멱등)
-piper_wait_ready                   # discovery 수렴 대기 (~20-30초 걸릴 수 있음). node list 가 비면 이걸로 기다리기
-ros2 node list                     # → 컨테이너의 /move_group, /controller_manager ... 가 보임
-ros2 action send_goal /arm_controller/follow_joint_trajectory control_msgs/action/FollowJointTrajectory \
-  "{trajectory: {joint_names: [joint1,joint2,joint3,joint4,joint5,joint6], points: [{positions: [0.6,0.0,-0.3,0.0,0.0,0.0], time_from_start: {sec: 2, nanosec: 0}}]}}"
-# → SUCCEEDED. 터미널 A 브라우저 RViz 에서 같은 팔이 동시에 움직이는 게 보임
-```
-
-> ⚠️ **방화벽**: 호스트 UFW 가 `INPUT policy DROP` 이면 컨테이너→호스트 discovery 응답이 막혀 `ros2 node list` 가 빕니다. `scripts/host-ros-env.sh` 가 `scripts/setup-host-firewall.sh` 를 자동 호출해 **`172.28.0.0/16 → 172.28.0.1` INPUT ACCEPT** 규칙(딱 이 bridge 서브넷만)을 멱등 등록합니다. sudo 없으면 privileged 컨테이너로 폴백. **재부팅 후에도 유지**하려면 한 번만: `sudo ufw allow from 172.28.0.0/16 to 172.28.0.1`.
->
-> ⚠️ **discovery 지연**: 컨테이너/네트워크를 갓 띄운 직후엔 유니캐스트 discovery 가 즉시 안 채워질 수 있습니다(~20-30초). `node list` 가 비어도 실패가 아니라 수렴 대기 중 — `piper_wait_ready` 로 기다리세요.
->
-> ⚠️ **보안**: noVNC 가 무인증(127.0.0.1 바인딩)으로 열리고 ROS 그래프가 bridge 에 노출됩니다. 신뢰된 랩 머신에서만 쓰세요. 컨트롤러에 직접 골을 쏘면 MoveIt 충돌검사를 건너뛰니, 실물에선 RViz Plan & Execute 를 권장합니다.
->
-> 🛡️ **기존 로컬 ROS2 시스템 안 깨지나?** 안 깨집니다 — 환경변수는 셸 한정, DDS 도메인(42)으로 격리, 방화벽은 좁은 ACCEPT 한 줄(순수 추가). 실측 근거는 **[docs/direct-profile-safety.md](docs/direct-profile-safety.md)** 참고.
-
----
-
 ## 실물 로봇 (리눅스 + CAN)
 
 > **리눅스 전용입니다.** 윈도우 / 맥에서는 실물 로봇을 못 돌립니다 — CAN은 리눅스 커널 기능(SocketCAN)이라 컨테이너가 호스트 커널의 CAN 인터페이스를 빌려야 하기 때문입니다. 윈도우/맥은 `mock` / `dev` 만 가능합니다.
@@ -218,8 +182,6 @@ mock과 동일한데 NVIDIA GPU를 예약해서 붙입니다. RViz 회전/렌더
 | 숫자 파싱 / locale 관련 에러 (move_group "expects a double") | `LC_NUMERIC=C` 로 설정됨 (컨테이너 env 기본값). C 로케일은 소수점 `.` 을 쓰므로 locale-gen 없이 파싱 문제 회피. en_US.UTF-8 은 베이스에 생성돼 있지 않아 일부러 안 씁니다. |
 | `docker compose exec` 로 들어갔는데 `ros2 node list` 가 비어 보임 | ROS 프로세스는 유저 `ubuntu` 로 돌고 DDS 공유메모리가 유저별이라, 기본 root 셸에서는 그래프가 안 보입니다. **`docker compose exec -u ubuntu mock bash`** 로 들어가세요. |
 | noVNC 3D 화면이 빠른 회전 때 끊김 | noVNC 특성상 빠른 시점 회전은 좀 버벅입니다. **조작 자체는 정상**이니 천천히 돌리면 됩니다. (부드럽게 원하면 GPU 프로파일) |
-| (direct) 호스트 `ros2 node list` 가 빔 | ① discovery 수렴 대기(~20-30초) → `piper_wait_ready`. ② 호스트 UFW INPUT DROP → `bash scripts/setup-host-firewall.sh` (헬퍼가 자동 호출하지만 수동 확인 가능). ③ 도메인 확인: `echo $ROS_DOMAIN_ID` 가 42 여야 함(헬퍼 source 했는지). |
-| (direct) `topic echo` 에 "A message was lost" | bridge 경유 UDPv4 유니캐스트의 일시적 알림. **데이터는 정상 도착**하니 무시해도 됩니다. |
 | (real) noVNC 가 `localhost:80` 에서 안 열림 | **real 데스크탑은 `http://localhost:6080`** 입니다(80 아님). host-network 라 ubuntu 권한으로 80(<1024)을 못 열어 `desktop-realfix.sh` 가 noVNC 를 6080 으로 재배치합니다. |
 | (real) 접속했는데 화면이 검음 / "갑자기 연결 끊김" | host-network 가 호스트의 X 디스플레이 `:1` 과 충돌 → 컨테이너 VNC 가 `:2` 로 재배치됩니다. 보통 자동 복구되지만, 끊기면 **브라우저 새로고침**. 그래도 안 되면 `docker exec piper-moveit-docker-real-1 supervisorctl status` 로 `vnc` 가 RUNNING 인지 확인(FATAL 이면 `docker exec piper-moveit-docker-real-1 supervisorctl restart vnc`). 화면잠금(MATE)은 desktop-realfix 가 꺼 둡니다. |
 | (real) `firmware version` / `enable status True` 가 안 뜸 | CAN 미연결/포트 불일치. 호스트가 **두 개 이상 CAN 인터페이스**를 가질 수 있으니(예: can0=Piper 1Mbps, can1=타 장치 500kbps), `candump can0` 로 프레임이 흐르고 `ip -details link show can0` 이 `bitrate 1000000` 인지로 Piper 쪽을 확인. |
@@ -280,7 +242,6 @@ IMAGE=ghcr.io/Bigenlight/piper-moveit:jazzy docker compose up mock
 ## 참고자료
 
 - **Piper 레퍼런스 모음** → **[docs/references.md](docs/references.md)** — 공식 문서/SDK/ROS2 드라이버/시뮬/텔레옵·RL 링크를 검증해서 정리 (구 스택 `piper_*` vs 신 스택 `agx_arm_*` 구분 포함).
-- **direct 프로파일 안전성** → [docs/direct-profile-safety.md](docs/direct-profile-safety.md) — 호스트 기존 ROS2 시스템과 충돌 안 하는 근거.
 
 ---
 
