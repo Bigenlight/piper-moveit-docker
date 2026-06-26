@@ -215,6 +215,13 @@ IMAGE=ghcr.io/Bigenlight/piper-moveit:jazzy docker compose up mock
 
 ---
 
+## 참고자료
+
+- **Piper 레퍼런스 모음** → **[docs/references.md](docs/references.md)** — 공식 문서/SDK/ROS2 드라이버/시뮬/텔레옵·RL 링크를 검증해서 정리 (구 스택 `piper_*` vs 신 스택 `agx_arm_*` 구분 포함).
+- **direct 프로파일 안전성** → [docs/direct-profile-safety.md](docs/direct-profile-safety.md) — 호스트 기존 ROS2 시스템과 충돌 안 하는 근거.
+
+---
+
 ## 출처 / 라이선스
 
 - **베이스**: [Tiryoh/docker-ros2-desktop-vnc](https://github.com/Tiryoh/docker-ros2-desktop-vnc) — Apache-2.0
