@@ -296,6 +296,8 @@ source ~/piper-rwh/ros2_ws/install/setup.bash
 LC_NUMERIC=C ros2 launch ~/piper-rwh/examples/python/ex03_moveit_py.launch.py
 ```
 
+> 기본으로 **RViz 가 떠서 팔이 움직이는 걸 볼 수 있습니다**(RViz 가 먼저 뜨도록 모션은 시작 ~6초 뒤부터). 헤드리스로 돌리려면 `use_rviz:=false`. 스크립트가 `예제 완료`를 찍어도 런치는 계속 떠 있으니 확인 후 **Ctrl-C** 로 종료하세요.
+
 ---
 
 ## 참고자료

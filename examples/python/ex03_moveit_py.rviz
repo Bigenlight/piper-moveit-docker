@@ -1,0 +1,65 @@
+# ex03 (moveit_py) 관전용 최소 RViz 설정 — RobotModel + TF + Grid 만.
+# mock 컨트롤러가 궤적을 실행하며 /joint_states 를 내보내고, robot_state_publisher 가
+# 이를 TF 로 방송하므로 팔이 움직이는 게 그대로 보인다. (MotionPlanning 패널은 없음)
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /RobotModel1
+      Splitter Ratio: 0.5
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 0.1
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Color: 160; 160; 164
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Visual Enabled: true
+      Collision Enabled: false
+      Description Source: Topic
+      # robot_state_publisher 는 robot_description 을 transient_local(latched)로 낸다
+      # -> RViz 도 Durability 를 Transient Local 로 맞춰야 늦게 붙어도 모델을 받는다.
+      Description Topic:
+        Value: /robot_description
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: false
+      Marker Scale: 0.3
+  Global Options:
+    Fixed Frame: base_link
+    Background Color: 48; 48; 48
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 1.4
+      Pitch: 0.4
+      Yaw: 0.8
+      Focal Point:
+        X: 0.1
+        Y: 0.0
+        Z: 0.2
+Window Geometry:
+  Height: 800
+  Width: 1200
+  Displays:
+    collapsed: false

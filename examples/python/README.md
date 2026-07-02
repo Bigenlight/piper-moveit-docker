@@ -47,3 +47,5 @@ source /opt/ros/jazzy/setup.bash
 source ~/piper-rwh/ros2_ws/install/setup.bash
 LC_NUMERIC=C ros2 launch ~/piper-rwh/examples/python/ex03_moveit_py.launch.py
 ```
+
+기본으로 RViz 가 떠서 팔 움직임을 볼 수 있습니다(모션은 RViz 가 뜬 뒤 ~6초부터). 헤드리스면 `use_rviz:=false`. `예제 완료` 후에도 런치는 계속 떠 있으니 **Ctrl-C** 로 종료.

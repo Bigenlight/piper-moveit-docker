@@ -10,13 +10,19 @@
   LC_NUMERIC=C ros2 launch ~/piper-rwh/examples/python/ex03_moveit_py.launch.py
 
 리포의 demo.launch.py / _moveit_config_builder.py 구성을 그대로 따르되,
-moveit_py 는 별도 move_group 을 띄우지 않으므로 rviz/move_group 노드는 뺐다.
+moveit_py 가 별도 move_group 을 띄우므로 move_group 노드는 뺐다.
+RViz 는 팔 움직임을 보려면 켤 수 있다(use_rviz, 기본 true / 헤드리스는 use_rviz:=false):
+  ... ros2 launch ~/piper-rwh/examples/python/ex03_moveit_py.launch.py use_rviz:=false
+RViz 가 뜬 뒤 모션을 보도록 moveit_py 시작을 잠깐 지연시킨다(START_DELAY).
 """
 
 from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, TimerAction
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 
@@ -37,6 +43,10 @@ SRDF_MAPPINGS = {
 # 이 디렉터리의 스크립트를 moveit_py 노드로 실행
 THIS_DIR = Path(__file__).resolve().parent
 SCRIPT = str(THIS_DIR / "ex03_moveit_py_official.py")
+RVIZ_CONFIG = str(THIS_DIR / "ex03_moveit_py.rviz")
+
+# RViz/컨트롤러가 뜬 뒤 모션을 보도록 moveit_py 노드 시작을 지연(초).
+START_DELAY = 6.0
 
 # MultiPipelinePlanRequestParameters 가 참조하는 파이프라인별 계획 파라미터.
 # (이름 그룹 → 실제 로드된 파이프라인 매핑; 스크립트의 ["ompl_rrtc","pilz_ptp"]와 일치)
@@ -139,12 +149,31 @@ def generate_launch_description():
         output="screen",
         parameters=[moveit_py_params],
     )
+    # RViz 가 먼저 뜨고 컨트롤러가 active 된 뒤 모션이 보이도록 지연 시작
+    delayed_moveit_py = TimerAction(period=START_DELAY, actions=[moveit_py_node])
+
+    # 관전용 RViz (RobotModel+TF). use_rviz:=false 면 헤드리스.
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        arguments=["-d", RVIZ_CONFIG],
+        output="screen",
+        parameters=[moveit_config.robot_description],
+        condition=IfCondition(LaunchConfiguration("use_rviz")),
+    )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            "use_rviz",
+            default_value="true",
+            choices=["true", "false"],
+            description="팔 움직임을 볼 RViz 를 띄운다(기본 true). 헤드리스면 false.",
+        ),
         rsp,
         ros2_control_node,
         spawner("joint_state_broadcaster"),
         spawner("arm_controller"),
         spawner("gripper_controller"),
-        moveit_py_node,
+        rviz_node,
+        delayed_moveit_py,
     ])
