@@ -157,8 +157,15 @@ LC_NUMERIC=C ros2 launch agx_arm_moveit demo.launch.py arm_type:=piper effector_
 - [ ] USB-CAN 꽂고 `ip link show type can` 으로 can0 확인
 - [ ] **전원 24 V·≥10 A**, 베이스 **M5 4볼트 고정**, 작업반경 **626 mm 비우기**, 페이로드 ≤1.5 kg
 - [ ] **물리 E-stop 없음** → 24 V 커넥터에 손 올릴 사람 지정
+- [ ] **티치(teach) 모드 OFF** — 세션 중 티치 버튼 누르지 말 것 (누르면 제어가 막힘, 아래 ⚠️)
 - [ ] 그리퍼 없으면 런치 인자를 `effector_type:=none` 으로
 - [ ] 펌웨어 **≥ S-V1.6-3**(URDF DH 일치), 가능하면 ≥ S-V1.8-5 (기동 로그에서 확인)
+
+> ⚠️ **티치 모드는 반드시 꺼진 상태로 시작.** 팔이 teach 모드면 드라이버가 로그에 `Agx_arm is in teach mode, cannot control` 을
+> 찍고 **MoveIt/CAN 제어를 전부 거부**합니다. **세션 중엔 티치 버튼을 아예 누르지 마세요.** 실수로 눌렀으면 그 세션 제어가 막히니
+> 빠져나와야 합니다 — `ros2 service call /exit_teach_mode std_srvs/srv/Empty "{}"` (piper 계열만) 또는 **팔 전원 재인가(재시작)**.
+> 🚨 단 펌웨어 **S-V1.7-3 은 teach 를 빠져나올 때 토크가 풀려 팔이 떨어집니다** — 반드시 팔을 받친 상태에서 (S-V1.8-5+ 는 seamless).
+> **한 세션은 수동(teach) 또는 MoveIt(CAN) 중 하나만.** 자세한 건 [piper-sdk-guide §6-1](docs/piper-sdk-guide.md).
 
 **구동:**
 
