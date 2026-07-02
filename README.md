@@ -247,6 +247,53 @@ sudo ip link set can0 down
 
 ---
 
+## Python 으로 MoveIt2 제어 (예제)
+
+Jazzy 에서 MoveIt2 를 파이썬으로 구동하는 길은 두 가지입니다.
+
+- **`moveit_py`** (공식 바인딩): 자체 `move_group` 을 **in-process 로 직접 띄웁니다**. 자기만의 런치 파일이 필요하고, `run-mock.sh`(demo.launch.py)와 **동시에 띄우면 안 됩니다**(move_group 이 둘이 되어 충돌). SRDF 이름 상태(`home` 등) 계획이 강점.
+- **`pymoveit2`** (커뮤니티): **이미 떠 있는 `move_group` 의 클라이언트**일 뿐입니다. 이 리포에서는 `run-mock.sh` 로 올린 `move_group` 에 붙어서 동작하므로 가볍게 시작하기 좋습니다.
+
+먼저 두 패키지를 설치하세요(아직 미설치):
+
+```bash
+sudo apt install ros-jazzy-pymoveit2 ros-jazzy-moveit-py
+```
+
+| 예제 | API | 보여주는 것 |
+|---|---|---|
+| [examples/python/ex01_pymoveit2_basic.py](examples/python/ex01_pymoveit2_basic.py) | `pymoveit2` | 관절공간 목표 이동(`move_to_configuration`), 홈 복귀, 두 번째 MoveIt2 인스턴스(`group_name="gripper"`)로 그리퍼 열기/닫기, 속도/가속 스케일링, MultiThreadedExecutor 데몬 스레드 스핀 |
+| [examples/python/ex02_pymoveit2_cartesian_scene.py](examples/python/ex02_pymoveit2_cartesian_scene.py) | `pymoveit2` | IK 기반 POSE 목표(`cartesian=False`), 직선 CARTESIAN PATH(`cartesian=True`), 플래닝 씬 충돌 박스 추가/우회/제거, 속도/가속 스케일링 |
+| [examples/python/ex03_moveit_py_official.py](examples/python/ex03_moveit_py_official.py) + [ex03_moveit_py.launch.py](examples/python/ex03_moveit_py.launch.py) | `moveit_py` | SRDF 이름 상태 계획(`set_goal_state(configuration_name="home")`), 관절/포즈 목표, planning scene 충돌물체 회피, MultiPipelinePlanRequestParameters 다중 파이프라인 + 단일 폴백 |
+
+### pymoveit2 예제 (ex01, ex02)
+
+`move_group` 이 먼저 떠 있어야 합니다. **터미널 1** 에서 `run-mock.sh` 를 띄우고 로그에 `You can start planning now!` 가 나올 때까지 기다리세요.
+
+```bash
+# 터미널 1
+./scripts/run-mock.sh        # "You can start planning now!" 대기
+
+# 터미널 2
+source /opt/ros/jazzy/setup.bash
+source ~/piper-rwh/ros2_ws/install/setup.bash
+python3 examples/python/ex01_pymoveit2_basic.py            # 또는 ex02_pymoveit2_cartesian_scene.py
+```
+
+> 그리퍼는 GripperCommand 가 아니라 JointTrajectoryController 라, `GripperInterface` 대신 `group_name="gripper"` 인 두 번째 MoveIt2 인스턴스로 제어합니다.
+
+### moveit_py 예제 (ex03)
+
+**단독 실행합니다 — `run-mock.sh` 와 같이 띄우지 마세요.** 자체 런치가 in-process `move_group` + mock ros2_control + 컨트롤러 스포너를 모두 올립니다. 실행 대상은 스크립트가 아니라 **런치 파일**입니다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/piper-rwh/ros2_ws/install/setup.bash
+LC_NUMERIC=C ros2 launch ~/piper-rwh/examples/python/ex03_moveit_py.launch.py
+```
+
+---
+
 ## 참고자료
 
 - **Piper 레퍼런스 모음** → **[docs/references.md](docs/references.md)** — 공식 문서/SDK/ROS2 드라이버/시뮬/텔레옵·RL 링크를 검증해서 정리 (구 스택 `piper_*` vs 신 스택 `agx_arm_*` 구분 포함).
