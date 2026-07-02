@@ -5,31 +5,42 @@ AgileX **Piper 6-DOF 로봇팔**을 `piper_sdk`(Python)로 직접 점검·제어
 
 > ROS2/MoveIt 없이 **SDK만으로** 상태확인·관절/그리퍼 제어를 하는 경로다.
 > ROS2 스택으로 갈 거면 [`real-robot-checklist.md`](real-robot-checklist.md) 참고.
+>
+> ⚠️ **여기 쓰는 `piper_sdk` 는 구 스택(Piper 전용)이다.** 진단·단독 제어용으로만 쓴다. 이 리포의
+> ROS 2 네이티브 스택이 실제로 까는 건 그 후속인 **`pyAgxArm`**(신 스택) 이다 — 둘은 다른 패키지다.
+> 구/신 스택 구분은 [`references.md`](references.md) 참고.
 
 ---
 
 ## 0. 현재 장비 정보 (이 환경 기준)
 
-| 항목 | 값 |
-|---|---|
-| OS / Python | Ubuntu 22.04.5 / Python 3.10.12 |
-| SDK | `piper_sdk` 0.4.1 (`~/.local/lib/python3.10/site-packages/piper_sdk`) |
-| CAN 어댑터 | gs_usb (candleLight) `1d50:606f` **2개** → `can0`, `can1` |
-| 보율(bitrate) | **1 Mbps (1000000)** ← Piper 고정, 이거 외엔 무시됨 |
-| 로봇 | 팔 **2대** (can0=암#1, can1=암#2), 둘 다 정상 |
-| 펌웨어 | **S-V1.7-3** (양쪽 동일) |
+> ⚠️ 아래 표는 **머신이 두 개** 섞여 있다. OS/Python 은 **이 머신(24.04 노트북)** 실측이고,
+> 팔 개수·펌웨어·SDK 버전은 **다른 머신(22.04, 2팔 세션)** 실측이라 이 머신에서 **재확인 전까지는 그대로 못 믿는다**.
+> 표에 (이 머신) / (재확인 필요) 로 출처를 박아둠.
+
+| 항목 | 값 | 출처 |
+|---|---|---|
+| OS / Python | Ubuntu 24.04.4 / Python 3.12 | 이 머신 |
+| SDK | **이 머신엔 `piper_sdk` 미설치** (22.04 머신엔 0.4.1 이 `~/.local/lib/python3.10/site-packages/piper_sdk` 에 있었음) | 재확인 필요 |
+| CAN 어댑터 | gs_usb (candleLight) `1d50:606f` | 재확인 필요 |
+| 보율(bitrate) | **1 Mbps (1000000)** ← Piper 고정, 이거 외엔 무시됨 | Piper 스펙 |
+| 로봇 | 팔 **2대** (can0=암#1, can1=암#2) — 이 머신엔 지금 CAN 어댑터/팔 안 붙어 있음 | 재확인 필요 |
+| 펌웨어 | **S-V1.7-3** (22.04 세션 실측, 양쪽 동일) | 재확인 필요 |
 
 ⚠️ **펌웨어 S-V1.7-3 한계**: teach 모드를 빠져나올 때 토크가 풀려 **팔이 떨어진다(drop)**.
 seamless 전환(드랍 없음)은 **≥ S-V1.8-5** 부터. 근본 해결은 펌웨어 업그레이드(셀프 불가 → `support@agilex.ai`).
+👉 단, 이 drop 경고는 **펌웨어가 S-V1.7-3 일 때만** 유효하다. 이 머신에 붙일 실물 펌웨어를 먼저 확인하고,
+S-V1.8-5 이상이면 이 항 자체가 해당 안 될 수 있으니 표의 펌웨어 값부터 재확인할 것.
 
 ---
 
 ## 1. 설치
 
 ```bash
-pip3 install piper_sdk          # python-can 자동 설치됨
-sudo apt install -y can-utils   # candump/cansend (진단용)
+pip3 install --user --break-system-packages piper_sdk   # python-can 자동 설치됨
+sudo apt install -y can-utils                           # candump/cansend (진단용)
 ```
+> 24.04(PEP668, externally-managed)에선 `--user` 만으론 거부된다 → `--user` 와 `--break-system-packages` 를 **둘 다** 붙여야 `~/.local` 에 깔린다(sudo 아님).
 
 SDK 안에 공식 헬퍼 스크립트/데모 포함:
 `find_all_can_port.sh`, `can_activate.sh`, `demo/V2/piper_ctrl_*.py`, `demo/detect_arm.py`
@@ -226,4 +237,4 @@ p.GripperCtrl(0,     500, 0x01, 0)   # 닫기
 - [ ] teach 버튼은 SDK 세션 중 만지지 말기 (S-V1.7-3 드랍 이슈)
 - [ ] 근본해결: 펌웨어 **≥ S-V1.8-5** 업그레이드 (AgileX 문의)
 
-*검증: 2026-06, can0/can1 실측 (상태확인·J6 상대이동·그리퍼·teach 복구). 출처: piper_sdk 0.4.1 데모/인터페이스, piper_ros 드라이버, piper_sdk issue #11, AgileX Quick Start Manual V1.0.*
+*검증: 2026-06, can0/can1 실측 (상태확인·J6 상대이동·그리퍼·teach 복구). **단 이 검증은 22.04 노트북 + 2팔(can0/can1) 세션 기준이다** — 지금 이 머신(24.04)에선 아직 재확인 안 됐으니 §0 표의 출처 표기를 보고, 실물 붙이면 펌웨어·팔 개수부터 다시 확인할 것. 출처: piper_sdk 0.4.1 데모/인터페이스, piper_ros 드라이버, piper_sdk issue #11, AgileX Quick Start Manual V1.0.*
