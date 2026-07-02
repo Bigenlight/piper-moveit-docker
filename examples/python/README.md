@@ -27,7 +27,11 @@ sudo apt install ros-jazzy-pymoveit2 ros-jazzy-moveit-py
 ```bash
 # 터미널 1
 ./scripts/run-mock.sh        # "You can start planning now!" 대기
+```
 
+그 다음 **터미널 2** 에서:
+
+```bash
 # 터미널 2
 source /opt/ros/jazzy/setup.bash
 source ~/piper-rwh/ros2_ws/install/setup.bash
